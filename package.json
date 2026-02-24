@@ -1,0 +1,53 @@
+{
+  "name": "viral-content-engine",
+  "version": "1.0.0",
+  "description": "Daily content generation pipeline: scrape viral tweets, generate original content with Claude AI",
+  "type": "module",
+  "bin": {
+    "viral-engine": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    ".env.example",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "scrape": "tsx src/index.ts scrape",
+    "generate": "tsx src/index.ts generate",
+    "daily": "tsx src/index.ts daily",
+    "view": "tsx src/server.ts",
+    "start": "tsx src/index.ts"
+  },
+  "author": "Dylan Worrall",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IntownNFT/viral-content-engine"
+  },
+  "keywords": [
+    "cli",
+    "content-generation",
+    "twitter",
+    "claude-ai",
+    "viral",
+    "automation"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.50.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.12.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

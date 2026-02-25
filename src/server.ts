@@ -2,6 +2,7 @@ import http from "http";
 import fs from "fs/promises";
 import path from "path";
 import { loadConfig, getDataRoot } from "./utils/config.js";
+import { loadLatestAbVariations } from "./utils/storage.js";
 
 loadConfig();
 
@@ -45,7 +46,8 @@ function buildHtml() {
   .tab.active { color: #00C853; border-bottom-color: #00C853; }
   .count { background: #1a1a1a; color: #888; font-size: 11px; padding: 2px 7px; border-radius: 10px; margin-left: 6px; }
   .tab.active .count { background: #00C85322; color: #00C853; }
-  .main { max-width: 800px; margin: 0 auto; padding: 32px; }
+  .main { max-width: 1200px; margin: 0 auto; padding: 32px; }
+  .main.narrow { max-width: 800px; }
   .card { background: #141414; border: 1px solid #222; border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
   .card-header { padding: 16px 20px; border-bottom: 1px solid #1a1a1a; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
   .card-header:hover { background: #1a1a1a; }
@@ -72,6 +74,17 @@ function buildHtml() {
   .copy-btn:hover { background: #252525; color: #fff; }
   .refresh { background: none; border: 1px solid #333; color: #888; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
   .refresh:hover { border-color: #00C853; color: #00C853; }
+  .ab-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .ab-col { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 16px; }
+  .ab-col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+  .ab-col.original h4 { color: #00C853; }
+  .ab-col.var-a h4 { color: #448AFF; }
+  .ab-col.var-b h4 { color: #FF9100; }
+  .ab-col p { font-size: 13px; line-height: 1.6; color: #ccc; }
+  .ab-number { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 12px; }
+  .ab-copy { background: none; border: 1px solid #333; color: #777; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 10px; }
+  .ab-copy:hover { border-color: #00C853; color: #00C853; }
+  @media (max-width: 768px) { .ab-group { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -85,10 +98,12 @@ function buildHtml() {
   <div class="tab active" data-tab="tweets">Tweets <span class="count" id="count-tweets">0</span></div>
   <div class="tab" data-tab="blogs">Blogs <span class="count" id="count-blogs">0</span></div>
   <div class="tab" data-tab="reels">Reels <span class="count" id="count-reels">0</span></div>
+  <div class="tab" data-tab="ab">A/B Tests <span class="count" id="count-ab">0</span></div>
 </div>
-<div class="main" id="main"></div>
+<div class="main narrow" id="main"></div>
 <script>
 var data = { tweets: [], blogs: [], reels: [] };
+var abData = null;
 var activeTab = 'tweets';
 
 document.querySelectorAll('.tab').forEach(function(tab) {
@@ -96,6 +111,12 @@ document.querySelectorAll('.tab').forEach(function(tab) {
     document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
     tab.classList.add('active');
     activeTab = tab.dataset.tab;
+    var mainEl = document.getElementById('main');
+    if (activeTab === 'ab') {
+      mainEl.classList.remove('narrow');
+    } else {
+      mainEl.classList.add('narrow');
+    }
     render();
   });
 });
@@ -143,12 +164,44 @@ function copyContent(idx) {
   });
 }
 
+function copyAbText(groupIdx, type) {
+  if (!abData || !abData.groups[groupIdx]) return;
+  var g = abData.groups[groupIdx];
+  var text = type === 'original' ? g.original : type === 'a' ? g.variationA : g.variationB;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('ab-copy-' + groupIdx + '-' + type);
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+  });
+}
+
 function toggleCard(idx) {
   var card = document.getElementById('card-' + idx);
   card.classList.toggle('open');
 }
 
+function renderAb() {
+  var el = document.getElementById('main');
+  if (!abData || !abData.groups || abData.groups.length === 0) {
+    el.innerHTML = '<div class="empty"><p>No A/B variations yet. Run: viral-engine generate --ab</p></div>';
+    return;
+  }
+  var html = '<h2 style="color:#fff;margin-bottom:8px;">A/B Tweet Variations</h2>';
+  html += '<p style="color:#666;margin-bottom:24px;font-size:13px;">Generated: ' + escapeHtml(abData.generatedAt || '') + '</p>';
+  for (var i = 0; i < abData.groups.length; i++) {
+    var g = abData.groups[i];
+    html += '<div class="ab-number">Tweet ' + (i + 1) + '</div>';
+    html += '<div class="ab-group">';
+    html += '<div class="ab-col original"><h4>Original</h4><p>' + escapeHtml(g.original) + '</p><button class="ab-copy" id="ab-copy-' + i + '-original" onclick="copyAbText(' + i + ',\'original\')">Copy</button></div>';
+    html += '<div class="ab-col var-a"><h4>Variation A</h4><p>' + escapeHtml(g.variationA) + '</p><button class="ab-copy" id="ab-copy-' + i + '-a" onclick="copyAbText(' + i + ',\'a\')">Copy</button></div>';
+    html += '<div class="ab-col var-b"><h4>Variation B</h4><p>' + escapeHtml(g.variationB) + '</p><button class="ab-copy" id="ab-copy-' + i + '-b" onclick="copyAbText(' + i + ',\'b\')">Copy</button></div>';
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
 function render() {
+  if (activeTab === 'ab') { renderAb(); return; }
   var items = data[activeTab] || [];
   var el = document.getElementById('main');
   if (items.length === 0) {
@@ -186,6 +239,15 @@ function loadAll() {
     document.getElementById('lastRun').textContent = 'Last refresh: ' + new Date().toLocaleTimeString();
     render();
   });
+  fetch('/api/ab-variations').then(function(res) { return res.json(); }).then(function(json) {
+    abData = json;
+    var count = (json && json.groups) ? json.groups.length : 0;
+    document.getElementById('count-ab').textContent = count;
+    if (activeTab === 'ab') render();
+  }).catch(function() {
+    abData = null;
+    document.getElementById('count-ab').textContent = '0';
+  });
 }
 
 loadAll();
@@ -206,11 +268,18 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url === "/api/ab-variations") {
+    const data = await loadLatestAbVariations();
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(data || { generatedAt: null, groups: [] }));
+    return;
+  }
+
   res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   res.end(buildHtml());
 });
 
 server.listen(PORT, () => {
   console.log(`\n  Viral Content Engine UI`);
-  console.log(`  → http://localhost:${PORT}\n`);
+  console.log(`  \u2192 http://localhost:${PORT}\n`);
 });

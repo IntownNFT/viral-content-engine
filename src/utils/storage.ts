@@ -31,6 +31,32 @@ export interface History {
   lastGenerate: string | null;
 }
 
+// ---- Trending topics ----
+
+export interface TrendingTopic {
+  name: string;
+  category: string;
+  postCount: number;
+}
+
+export interface TrendsData {
+  scrapedAt: string;
+  trends: TrendingTopic[];
+}
+
+// ---- A/B Variations ----
+
+export interface AbVariationGroup {
+  original: string;
+  variationA: string;
+  variationB: string;
+}
+
+export interface AbVariationsData {
+  generatedAt: string;
+  groups: AbVariationGroup[];
+}
+
 function resolve(...segments: string[]) {
   return path.join(ROOT, ...segments);
 }
@@ -111,4 +137,56 @@ export async function saveOutput(
   await fs.writeFile(file, content);
   log.success(`Saved ${type} → ${file}`);
   return file;
+}
+
+// ---- Trends data ----
+
+export async function saveTrendsData(data: TrendsData): Promise<void> {
+  const date = new Date().toISOString().slice(0, 10);
+  const dir = resolve("data", "trends");
+  await ensureDir(dir);
+  const file = path.join(dir, `${date}.json`);
+  await fs.writeFile(file, JSON.stringify(data, null, 2));
+  log.success(`Saved trends data → ${file}`);
+}
+
+export async function loadLatestTrends(): Promise<TrendsData | null> {
+  const dir = resolve("data", "trends");
+  await ensureDir(dir);
+
+  const files = (await fs.readdir(dir))
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .reverse();
+
+  if (files.length === 0) return null;
+
+  const raw = await fs.readFile(path.join(dir, files[0]), "utf-8");
+  return JSON.parse(raw);
+}
+
+// ---- A/B Variations ----
+
+export async function saveAbVariations(data: AbVariationsData): Promise<void> {
+  const date = new Date().toISOString().slice(0, 10);
+  const dir = resolve("data", "ab-variations");
+  await ensureDir(dir);
+  const file = path.join(dir, `${date}.json`);
+  await fs.writeFile(file, JSON.stringify(data, null, 2));
+  log.success(`Saved A/B variations data → ${file}`);
+}
+
+export async function loadLatestAbVariations(): Promise<AbVariationsData | null> {
+  const dir = resolve("data", "ab-variations");
+  await ensureDir(dir);
+
+  const files = (await fs.readdir(dir))
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .reverse();
+
+  if (files.length === 0) return null;
+
+  const raw = await fs.readFile(path.join(dir, files[0]), "utf-8");
+  return JSON.parse(raw);
 }

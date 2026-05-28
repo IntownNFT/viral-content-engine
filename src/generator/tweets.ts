@@ -1,10 +1,13 @@
 import { generate } from "./claude.js";
-import { SYSTEM_PROMPT_TWEETS, SYSTEM_PROMPT_VARIATIONS } from "../config/prompts.js";
+import { buildTweetSystemPrompt, buildVariationsSystemPrompt, withSoul } from "../config/prompts.js";
+import { loadSoul } from "../config/soul.js";
 import {
   saveOutput,
   loadLatestTrends,
   saveAbVariations,
+  loadAllSelfTweets,
   type ScrapedData,
+  type ScrapedTweet,
   type TrendsData,
   type AbVariationGroup,
 } from "../utils/storage.js";
@@ -49,6 +52,28 @@ function buildContext(scraped: ScrapedData[], trends?: TrendsData | null): strin
   return context;
 }
 
+function buildVoiceReference(selfTweets: ScrapedTweet[]): string {
+  if (selfTweets.length === 0) return "";
+
+  const scored = selfTweets
+    .map((t) => ({
+      ...t,
+      score: t.likes + t.retweets * 3 + t.replies * 2,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 15);
+
+  return (
+    "\n\n--- YOUR VOICE REFERENCE ---\n" +
+    "These are the user's own top-performing tweets. " +
+    "Match this voice, tone, vocabulary, and sentence rhythm closely. " +
+    "Do NOT copy these tweets — use them to understand HOW the user writes.\n\n" +
+    scored
+      .map((t) => `(${t.likes} likes) "${t.text}"`)
+      .join("\n\n")
+  );
+}
+
 function parseVariations(raw: string): AbVariationGroup[] {
   const groups: AbVariationGroup[] = [];
   const blocks = raw.split("===").map((b) => b.trim()).filter(Boolean);
@@ -85,7 +110,8 @@ ${tweets.map((t, i) => `Tweet ${i + 1}:\n${t}`).join("\n\n")}
 
 Remember: output each group as ORIGINAL / VARIATION A / VARIATION B, separated by "===".`;
 
-  const raw = await generate(SYSTEM_PROMPT_VARIATIONS, userPrompt, 8192);
+  const variationsPrompt = await buildVariationsSystemPrompt();
+  const raw = await generate(variationsPrompt, userPrompt, 8192);
   const groups = parseVariations(raw);
 
   const date = new Date().toISOString().slice(0, 10);
@@ -110,8 +136,11 @@ export async function generateTweets(
 ): Promise<string> {
   log.info("Generating tweets...");
 
+  const soul = await loadSoul();
   const trends = await loadLatestTrends();
+  const selfTweets = await loadAllSelfTweets();
   const context = buildContext(scraped, trends);
+  const voiceRef = buildVoiceReference(selfTweets);
   const date = new Date().toISOString().slice(0, 10);
 
   let trendHook = "";
@@ -132,9 +161,10 @@ Mix these formats:
 
 Each tweet should reinforce the core thesis: volume > quality.${trendHook}
 
-Output each tweet separated by "---". No numbering, no labels.`;
+Output each tweet separated by "---". No numbering, no labels.${voiceRef}`;
 
-  const raw = await generate(SYSTEM_PROMPT_TWEETS, userPrompt);
+  const tweetPrompt = await buildTweetSystemPrompt();
+  const raw = await generate(withSoul(tweetPrompt, soul), userPrompt);
 
   const output = `# Generated Tweets — ${date}\n\n${raw}\n`;
   await saveOutput("tweets", output);

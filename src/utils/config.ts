@@ -59,9 +59,11 @@ export async function initConfig(): Promise<void> {
 # Docs: https://github.com/IntownNFT/viral-content-engine
 
 ANTHROPIC_API_KEY=
+X_BEARER_TOKEN=
 TWITTER_USERNAME=
 TWITTER_PASSWORD=
 CLAUDE_MODEL=claude-sonnet-4-6
+MY_TWITTER_HANDLE=
 `;
 
   await fs.writeFile(envPath, template);
@@ -71,6 +73,15 @@ CLAUDE_MODEL=claude-sonnet-4-6
   console.log(`  2. (Optional) Add Twitter credentials for scraping`);
   console.log(`  3. Install Playwright browsers: npx playwright install chromium`);
   console.log(`  4. Run: viral-engine daily`);
+}
+
+/**
+ * Get the user's own Twitter handle from env, stripped of leading @.
+ */
+export function getMyHandle(): string | null {
+  const raw = process.env.MY_TWITTER_HANDLE;
+  if (!raw || !raw.trim()) return null;
+  return raw.trim().replace(/^@/, "");
 }
 
 export function printMissingKeyMessage(): void {

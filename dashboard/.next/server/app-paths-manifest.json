@@ -1,0 +1,19 @@
+{
+  "/api/content/route": "app/api/content/route.js",
+  "/api/status/route": "app/api/status/route.js",
+  "/api/ab-variations/route": "app/api/ab-variations/route.js",
+  "/api/performance/route": "app/api/performance/route.js",
+  "/api/research/latest/route": "app/api/research/latest/route.js",
+  "/api/creators/route": "app/api/creators/route.js",
+  "/api/heartbeat/status/route": "app/api/heartbeat/status/route.js",
+  "/api/settings/route": "app/api/settings/route.js",
+  "/api/soul/route": "app/api/soul/route.js",
+  "/(tabs)/tweets/page": "app/(tabs)/tweets/page.js",
+  "/(tabs)/blogs/page": "app/(tabs)/blogs/page.js",
+  "/(tabs)/reels/page": "app/(tabs)/reels/page.js",
+  "/(tabs)/ab-tests/page": "app/(tabs)/ab-tests/page.js",
+  "/(tabs)/performance/page": "app/(tabs)/performance/page.js",
+  "/(tabs)/research/page": "app/(tabs)/research/page.js",
+  "/(tabs)/creators/page": "app/(tabs)/creators/page.js",
+  "/(tabs)/settings/page": "app/(tabs)/settings/page.js"
+}

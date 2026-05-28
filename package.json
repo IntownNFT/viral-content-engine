@@ -21,7 +21,8 @@
     "scrape": "tsx src/index.ts scrape",
     "generate": "tsx src/index.ts generate",
     "daily": "tsx src/index.ts daily",
-    "view": "tsx src/server.ts",
+    "view": "cd dashboard && npx next dev --port 3333",
+    "build:dashboard": "cd dashboard && npx next build",
     "start": "tsx src/index.ts"
   },
   "author": "Dylan Worrall",
@@ -40,13 +41,28 @@
   ],
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@tailwindcss/typography": "^0.5.19",
+    "autoprefixer": "^10.4.27",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
+    "lucide-react": "^0.575.0",
+    "next": "^14.2.35",
     "node-cron": "^3.0.3",
-    "playwright": "^1.50.0"
+    "playwright": "^1.50.0",
+    "postcss": "^8.5.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sonner": "^1.7.4",
+    "swr": "^2.4.0",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^3.4.19"
   },
   "devDependencies": {
     "@types/node": "^22.12.0",
     "@types/node-cron": "^3.0.11",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

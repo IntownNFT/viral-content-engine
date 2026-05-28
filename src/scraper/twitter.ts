@@ -1,7 +1,8 @@
 import type { BrowserContext } from "playwright";
 import { log } from "../utils/logger.js";
-import { saveScrapedData, type ScrapedTweet } from "../utils/storage.js";
+import { saveScrapedData, saveSelfScrapedData, type ScrapedTweet } from "../utils/storage.js";
 import { createBrowserContext, ensureLoggedIn } from "./auth.js";
+import { getMyHandle } from "../utils/config.js";
 
 function randomDelay(min = 2000, max = 5000): Promise<void> {
   const ms = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -17,10 +18,17 @@ function parseMetric(text: string | null): number {
   return isNaN(n) ? 0 : n;
 }
 
-async function scrapeTweetsFromProfile(
+export interface ScrapeProfileOptions {
+  maxAgeHours?: number;
+  scrollCount?: number;
+}
+
+export async function scrapeTweetsFromProfile(
   context: BrowserContext,
-  handle: string
+  handle: string,
+  options: ScrapeProfileOptions = {}
 ): Promise<ScrapedTweet[]> {
+  const { maxAgeHours = 48, scrollCount = 5 } = options;
   const page = await context.newPage();
   const tweets: ScrapedTweet[] = [];
 
@@ -35,7 +43,7 @@ async function scrapeTweetsFromProfile(
     await page.waitForSelector('article[data-testid="tweet"]', { timeout: 15000 });
 
     // Scroll a few times to load more tweets
-    const SCROLL_COUNT = 5;
+    const SCROLL_COUNT = scrollCount;
     for (let i = 0; i < SCROLL_COUNT; i++) {
       await page.evaluate(() => window.scrollBy(0, window.innerHeight));
       await randomDelay(1500, 3000);
@@ -63,10 +71,10 @@ async function scrapeTweetsFromProfile(
         const timeEl = await article.$("time");
         const timestamp = timeEl ? (await timeEl.getAttribute("datetime")) || "" : "";
 
-        // Filter: only tweets from last 48 hours
+        // Filter: only tweets within maxAgeHours
         if (timestamp) {
           const tweetDate = new Date(timestamp);
-          const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+          const cutoff = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
           if (tweetDate < cutoff) continue;
         }
 
@@ -129,6 +137,35 @@ export async function scrapeCreators(handles: string[]): Promise<void> {
         tweets,
       });
     }
+  } finally {
+    await context.browser()?.close();
+  }
+}
+
+export async function scrapeSelf(): Promise<void> {
+  const handle = getMyHandle();
+  if (!handle) {
+    log.info("No MY_TWITTER_HANDLE set — skipping self-scrape");
+    return;
+  }
+
+  log.info(`Self-scraping @${handle}...`);
+  const context = await createBrowserContext();
+
+  try {
+    await ensureLoggedIn(context);
+    const tweets = await scrapeTweetsFromProfile(context, handle, {
+      maxAgeHours: 336, // 14 days
+      scrollCount: 10,
+    });
+
+    await saveSelfScrapedData({
+      handle,
+      scrapedAt: new Date().toISOString(),
+      tweets,
+    });
+
+    log.success(`Self-scraped ${tweets.length} tweets from @${handle}`);
   } finally {
     await context.browser()?.close();
   }

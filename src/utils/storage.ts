@@ -190,3 +190,94 @@ export async function loadLatestAbVariations(): Promise<AbVariationsData | null>
   const raw = await fs.readFile(path.join(dir, files[0]), "utf-8");
   return JSON.parse(raw);
 }
+
+// ---- Self-scraped tweets ----
+
+export async function saveSelfScrapedData(data: ScrapedData): Promise<void> {
+  const date = new Date().toISOString().slice(0, 10);
+  const dir = resolve("data", "self");
+  await ensureDir(dir);
+  const file = path.join(dir, `${date}.json`);
+  await fs.writeFile(file, JSON.stringify(data, null, 2));
+  log.success(`Saved self-scraped data → ${file}`);
+}
+
+export async function loadSelfScrapedData(days = 30): Promise<ScrapedData[]> {
+  const dir = resolve("data", "self");
+  await ensureDir(dir);
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const files = (await fs.readdir(dir))
+    .filter((f) => f.endsWith(".json") && f.slice(0, 10) >= cutoffStr)
+    .sort()
+    .reverse();
+
+  const results: ScrapedData[] = [];
+  for (const file of files) {
+    const raw = await fs.readFile(path.join(dir, file), "utf-8");
+    results.push(JSON.parse(raw));
+  }
+  return results;
+}
+
+export async function loadAllSelfTweets(days = 30): Promise<ScrapedTweet[]> {
+  const data = await loadSelfScrapedData(days);
+  // Dedupe by tweet id
+  const seen = new Set<string>();
+  const tweets: ScrapedTweet[] = [];
+  for (const d of data) {
+    for (const t of d.tweets) {
+      if (t.id && !seen.has(t.id)) {
+        seen.add(t.id);
+        tweets.push(t);
+      }
+    }
+  }
+  return tweets;
+}
+
+// ---- Performance tracking ----
+
+export interface PerformanceMatch {
+  generatedText: string;
+  postedText: string;
+  similarity: number;
+  likes: number;
+  retweets: number;
+  replies: number;
+  views: number;
+  postedAt: string;
+}
+
+export async function savePerformanceData(matches: PerformanceMatch[]): Promise<void> {
+  const date = new Date().toISOString().slice(0, 10);
+  const dir = resolve("data", "performance");
+  await ensureDir(dir);
+  const file = path.join(dir, `${date}.json`);
+  await fs.writeFile(file, JSON.stringify(matches, null, 2));
+  log.success(`Saved performance data → ${file}`);
+}
+
+export async function loadPerformanceData(days = 30): Promise<PerformanceMatch[]> {
+  const dir = resolve("data", "performance");
+  await ensureDir(dir);
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const files = (await fs.readdir(dir))
+    .filter((f) => f.endsWith(".json") && f.slice(0, 10) >= cutoffStr)
+    .sort()
+    .reverse();
+
+  const all: PerformanceMatch[] = [];
+  for (const file of files) {
+    const raw = await fs.readFile(path.join(dir, file), "utf-8");
+    all.push(...JSON.parse(raw));
+  }
+  return all;
+}

@@ -1,13 +1,17 @@
+import fs from "fs/promises";
+import path from "path";
+import { APP_DIR } from "../utils/config.js";
+
 /**
  * Core thesis that all generated content reinforces:
  * "Going viral is about output volume, not ad spend or video quality."
  */
 
-export const CORE_THESIS =
+export const DEFAULT_CORE_THESIS =
   "Going viral is about output volume, not ad spend or video quality. " +
   "Post more, clip more, repurpose more. Quantity creates the surface area for luck to land.";
 
-export const CONTENT_PILLARS = [
+export const DEFAULT_CONTENT_PILLARS = [
   "Clipping & repurposing long-form content into short-form",
   "Content creation workflows and systems",
   "Organic marketing over paid ads",
@@ -15,13 +19,32 @@ export const CONTENT_PILLARS = [
   "Platform-native formats and hooks",
 ];
 
-// ---- System prompts per content type ----
+// Backward compat — dashboard and other modules may import these
+export const CONTENT_PILLARS = DEFAULT_CONTENT_PILLARS;
 
-export const SYSTEM_PROMPT_TWEETS = `You are a viral tweet ghostwriter specializing in content creation, clipping, and organic marketing.
+/**
+ * Load pillars from ~/.viral-engine/pillars.json, falling back to defaults.
+ */
+export async function loadPillars(): Promise<string[]> {
+  try {
+    const raw = await fs.readFile(path.join(APP_DIR, "pillars.json"), "utf-8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  } catch {
+    // File doesn't exist or parse error — use defaults
+  }
+  return DEFAULT_CONTENT_PILLARS;
+}
 
-Core thesis you promote: ${CORE_THESIS}
+// ---- System prompt builders per content type ----
 
-Content pillars: ${CONTENT_PILLARS.join("; ")}.
+export async function buildTweetSystemPrompt(): Promise<string> {
+  const pillars = await loadPillars();
+  return `You are a viral tweet ghostwriter specializing in content creation, clipping, and organic marketing.
+
+Core thesis you promote: ${DEFAULT_CORE_THESIS}
+
+Content pillars: ${pillars.join("; ")}.
 
 Style rules:
 - Punchy, direct, no fluff
@@ -31,10 +54,15 @@ Style rules:
 - Mix formats: one-liners, hot takes, listicles, "most people" hooks, thread starters
 - Never use hashtags. Never say "game-changer" or "unlock".
 - Write like a practitioner sharing lessons, not a guru lecturing.`;
+}
 
-export const SYSTEM_PROMPT_BLOGS = `You are a long-form content writer specializing in content creation, clipping, and organic marketing.
+export async function buildBlogSystemPrompt(): Promise<string> {
+  const pillars = await loadPillars();
+  return `You are a long-form content writer specializing in content creation, clipping, and organic marketing.
 
-Core thesis: ${CORE_THESIS}
+Core thesis: ${DEFAULT_CORE_THESIS}
+
+Content pillars: ${pillars.join("; ")}.
 
 Style rules:
 - SEO-friendly structure with clear H2/H3 headers
@@ -45,10 +73,15 @@ Style rules:
 - 800-1200 words
 - End with a clear CTA
 - Write like a blog post that doubles as a video script: use short paragraphs, direct address ("you"), and verbal transitions.`;
+}
 
-export const SYSTEM_PROMPT_REELS = `You are a short-form video scriptwriter specializing in content creation, clipping, and organic marketing.
+export async function buildReelSystemPrompt(): Promise<string> {
+  const pillars = await loadPillars();
+  return `You are a short-form video scriptwriter specializing in content creation, clipping, and organic marketing.
 
-Core thesis: ${CORE_THESIS}
+Core thesis: ${DEFAULT_CORE_THESIS}
+
+Content pillars: ${pillars.join("; ")}.
 
 Style rules:
 - Hook in the first 2 seconds — a bold claim, question, or pattern interrupt
@@ -58,10 +91,15 @@ Style rules:
 - CTA should feel natural, not salesy — "Follow for more" or a question to drive comments
 - Use simple language, 8th-grade reading level
 - Include [VISUAL NOTE] cues where B-roll or text overlays would go.`;
+}
 
-export const SYSTEM_PROMPT_VARIATIONS = `You are an A/B testing specialist for viral tweets about content creation, clipping, and organic marketing.
+export async function buildVariationsSystemPrompt(): Promise<string> {
+  const pillars = await loadPillars();
+  return `You are an A/B testing specialist for viral tweets about content creation, clipping, and organic marketing.
 
-Core thesis: ${CORE_THESIS}
+Core thesis: ${DEFAULT_CORE_THESIS}
+
+Content pillars: ${pillars.join("; ")}.
 
 Your job: Given a set of original tweets, generate 2 alternative variations of each tweet. Each variation should:
 - Keep the same core message and insight
@@ -84,3 +122,12 @@ VARIATION B:
 ===
 
 Use "===" to separate each tweet group. Do NOT add numbering or extra labels.`;
+}
+
+/**
+ * Append the user's soul.md style guide to any system prompt.
+ */
+export function withSoul(basePrompt: string, soulContent: string): string {
+  if (!soulContent.trim()) return basePrompt;
+  return `${basePrompt}\n\n--- USER STYLE GUIDE ---\n${soulContent}`
+}

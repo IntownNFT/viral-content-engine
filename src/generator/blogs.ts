@@ -1,9 +1,10 @@
 import { generate } from "./claude.js";
-import { SYSTEM_PROMPT_BLOGS, CONTENT_PILLARS } from "../config/prompts.js";
-import { saveOutput, loadLatestTrends, type ScrapedData, type TrendsData } from "../utils/storage.js";
+import { buildBlogSystemPrompt, loadPillars, withSoul } from "../config/prompts.js";
+import { loadSoul } from "../config/soul.js";
+import { saveOutput, loadLatestTrends, loadAllSelfTweets, type ScrapedData, type ScrapedTweet, type TrendsData } from "../utils/storage.js";
 import { log } from "../utils/logger.js";
 
-function pickTopic(scraped: ScrapedData[], trends?: TrendsData | null): string {
+async function pickTopic(scraped: ScrapedData[], trends?: TrendsData | null): Promise<string> {
   // Find the single most-engaged tweet to inspire the blog topic
   const allTweets = scraped.flatMap((s) =>
     s.tweets.map((t) => ({
@@ -20,7 +21,8 @@ function pickTopic(scraped: ScrapedData[], trends?: TrendsData | null): string {
     topic = `Inspiration tweet (from @${top.handle}, ${top.likes} likes):\n"${top.text}"`;
   } else {
     // Fallback: pick a random pillar
-    const pillar = CONTENT_PILLARS[Math.floor(Math.random() * CONTENT_PILLARS.length)];
+    const pillars = await loadPillars();
+    const pillar = pillars[Math.floor(Math.random() * pillars.length)];
     topic = `Write about this content pillar: ${pillar}`;
   }
 
@@ -36,11 +38,34 @@ function pickTopic(scraped: ScrapedData[], trends?: TrendsData | null): string {
   return topic;
 }
 
+function buildBlogVoiceReference(selfTweets: ScrapedTweet[]): string {
+  if (selfTweets.length === 0) return "";
+
+  const scored = selfTweets
+    .map((t) => ({
+      ...t,
+      score: t.likes + t.retweets * 3 + t.replies * 2,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+
+  return (
+    "\n\n--- YOUR VOICE REFERENCE ---\n" +
+    "These are the user's own top-performing tweets. " +
+    "Match the user's tone, vocabulary, and personality in the blog. " +
+    "Write as if they authored it.\n\n" +
+    scored.map((t) => `"${t.text}"`).join("\n\n")
+  );
+}
+
 export async function generateBlog(scraped: ScrapedData[]): Promise<string> {
   log.info("Generating blog article...");
 
+  const soul = await loadSoul();
   const trends = await loadLatestTrends();
-  const topic = pickTopic(scraped, trends);
+  const selfTweets = await loadAllSelfTweets();
+  const topic = await pickTopic(scraped, trends);
+  const voiceRef = buildBlogVoiceReference(selfTweets);
   const date = new Date().toISOString().slice(0, 10);
 
   let trendHook = "";
@@ -59,9 +84,10 @@ Write a blog article (800-1200 words) inspired by this topic. The article should
 5. End with a clear CTA (follow, subscribe, or start creating)
 6. Reinforce the thesis: posting volume and repurposing > polished production${trendHook}
 
-Format as clean markdown. The article should double as a script someone could read on camera.`;
+Format as clean markdown. The article should double as a script someone could read on camera.${voiceRef}`;
 
-  const raw = await generate(SYSTEM_PROMPT_BLOGS, userPrompt, 4096);
+  const blogPrompt = await buildBlogSystemPrompt();
+  const raw = await generate(withSoul(blogPrompt, soul), userPrompt, 4096);
 
   const output = `<!-- Generated: ${date} -->\n\n${raw}\n`;
   await saveOutput("blogs", output);

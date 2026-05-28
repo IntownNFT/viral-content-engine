@@ -1,0 +1,200 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: theme("colors.border");
+  }
+  body {
+    background-color: #000000;
+    color: #F5F5F7;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(142, 142, 147, 0.2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(142, 142, 147, 0.35);
+}
+
+/* ─── Glass — ONLY sidebar + header get blur ─── */
+.glass-surface {
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 inset rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-glass {
+  background: rgba(22, 22, 24, 0.95);
+  backdrop-filter: blur(40px) saturate(1.6);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Cards — solid backgrounds, NO blur ─── */
+.glass-card {
+  background: #1C1C1E;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 1px 0 inset rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 1px 0 inset rgba(255, 255, 255, 0.06),
+    0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Interactive elements — solid, NO blur ─── */
+.glass-interactive {
+  background: #2C2C2E;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.glass-interactive:hover {
+  background: #3A3A3C;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.glass-interactive:active {
+  background: #2C2C2E;
+}
+
+/* ─── Tinted variants — solid, NO blur ─── */
+.glass-tint-green {
+  background: rgba(10, 132, 255, 0.12);
+  border-color: rgba(10, 132, 255, 0.22);
+}
+
+.glass-tint-gold {
+  background: rgba(255, 159, 10, 0.1);
+  border-color: rgba(255, 159, 10, 0.22);
+}
+
+.glass-tint-blue {
+  background: rgba(94, 92, 230, 0.12);
+  border-color: rgba(94, 92, 230, 0.22);
+}
+
+.glass-tint-red {
+  background: rgba(255, 69, 58, 0.1);
+  border-color: rgba(255, 69, 58, 0.22);
+}
+
+.glass-tint-purple {
+  background: rgba(191, 90, 242, 0.1);
+  border-color: rgba(191, 90, 242, 0.22);
+}
+
+.glass-tint-apple-green {
+  background: rgba(48, 209, 88, 0.1);
+  border-color: rgba(48, 209, 88, 0.22);
+}
+
+/* ─── Tweet Preview Card — solid ─── */
+.tweet-preview {
+  position: relative;
+  background: #1C1C1E;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 1px 0 inset rgba(255, 255, 255, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.tweet-preview:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 1px 0 inset rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ─── Gradient text ─── */
+.gradient-text {
+  background: linear-gradient(135deg, #0A84FF 0%, #5E5CE6 50%, #BF5AF2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Glow effects ─── */
+.glow-blue {
+  box-shadow: 0 0 20px rgba(10, 132, 255, 0.15);
+}
+
+.glow-green-subtle {
+  box-shadow: 0 0 30px rgba(10, 132, 255, 0.08);
+}
+
+/* ─── Pulse animation ─── */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* ─── Active sidebar indicator ─── */
+.sidebar-active {
+  position: relative;
+}
+.sidebar-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: #0A84FF;
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 10px rgba(10, 132, 255, 0.5);
+}
+
+/* ─── Markdown prose ─── */
+.prose {
+  --tw-prose-body: #E5E5EA;
+  --tw-prose-headings: #F5F5F7;
+  --tw-prose-links: #0A84FF;
+  --tw-prose-bold: #F5F5F7;
+  --tw-prose-code: #0A84FF;
+  --tw-prose-pre-bg: #1C1C1E;
+  --tw-prose-pre-code: #E5E5EA;
+  --tw-prose-quotes: #8E8E93;
+  --tw-prose-hr: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Focus rings ─── */
+*:focus-visible {
+  outline: 2px solid rgba(10, 132, 255, 0.6);
+  outline-offset: 2px;
+}
+
+/* ─── Dividers ─── */
+.divider-glass {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Dot pattern ─── */
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(142, 142, 147, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
